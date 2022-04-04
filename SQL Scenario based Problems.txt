@@ -1,0 +1,81 @@
+SCENARIO:
+
+Imagine we work in the management office for an organization with Sales, Ops & Finance departments. 
+Our organization has 3 grades namely G1, G2, G3.  Help us write queries to answer the questions below.
+ 
+Table details: 
+All employees: 
+-	A summary table with employee details. You can assume employee_id’s are unique to each employee
+ and there are no duplicates in the table. 
+-	Columns : empId | empName | dept | grade 
+Project details: 
+-	This contains the project details. Each project has been assigned to only one employee and 
+the project duration is also captured 
+-	Columns : project_id | empId | duration 
+ 
+Questions: 
+
+1.	How many employees  are there in each department? 
+
+Ans- select dept, count(empName) as employee_count
+         from EMPLOYEE
+         group by dept;
+
+2.	Which department has the maximum number of G1, G2 & G3 employees respectively? 
+
+Ans- select grade, max(cnt), dept
+      From (
+                 select dept,grade, count(grade) as cnt
+                 from EMPLOYEE
+                 group by dept,grade)
+          group by grade;
+
+3.	What is the average project completion time per department (in descending order)? 
+
+Ans- select e.dept, round(avg(p.duration),2) as average
+         From    EMPLOYEE e
+     join 
+     PROJECT p
+     on 
+     e.empId = p.empId
+        group by e.dept
+        order by average desc;
+
+4.	List down all the employees whose project duration is more than the average
+ of their respective departments? 
+
+Ans- select empName
+from (
+    with j_tbl as(
+        select *
+        from EMPLOYEE e
+             join 
+             PROJECT p
+             on 
+             e.empId = p.empId)
+    select *,
+        avg(duration) over (partition by dept) as avrg
+    from j_tbl
+    order by dept) s
+where s.duration > s.avrg;
+
+5.	Based on the least project duration the company decided to reassign grades G1 being most superior 
+then G2 followed by G3, with the project duration info assign new grades to the employees?  
+
+Ans-
+select empId, empName, dept,
+       case
+            when rnk = 1 then "G1"
+            when rnk = 2 then "G2"
+            else "G3"
+       end as new_grades
+from(
+     select *,
+        rank() over (partition by dept order by duration asc) as rnk
+            from EMPLOYEE e
+                 join 
+                 PROJECT p
+                 on 
+                 e.empId = p.empId
+     order by e.dept);
+ 
